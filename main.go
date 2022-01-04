@@ -16,14 +16,13 @@ const ( // parameters
 	playerR         = 4 // width of the square = 2 * R + 1
 	particleR       = 1
 	playerVelocity  = 4
-	particleTimeout = 10
+	particleTimeout = 0
 )
 
 const ( // physics constants
-	G              = 0.05
-	AirResistance  = 0.001
-	WallEnergyLoss = 0.1
-	Friction       = 0.1
+	G             = 0.1
+	AirResistance = 0.001
+	Friction      = 0.1
 )
 
 var (
@@ -38,9 +37,11 @@ func init() {
 	//pointerImage.Fill(color.RGBA{0xff, 0, 0, 0xff})
 }
 
+/*
 type line struct {
 	x1, y1, x2, y2 float64
 }
+*/
 
 type Particle struct {
 	vx float64
@@ -74,82 +75,102 @@ func (g *Game) init() error {
 }
 
 func (g *Game) Update() error {
-	g.clock++
-	if g.particleTimeout > 0 {
-		g.particleTimeout -= 1
-	}
-	g.keys = inpututil.AppendPressedKeys(g.keys[:0])
-	if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		g.px += playerVelocity
-		if g.px > screenWidth {
-			g.px -= screenWidth
+	if !ebiten.IsKeyPressed(ebiten.KeySpace) {
+		g.clock++
+		if g.particleTimeout > 0 {
+			g.particleTimeout -= 1
 		}
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
-		g.py += playerVelocity
-		if g.py > screenHeight {
-			g.py -= screenHeight
-		}
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		g.px -= playerVelocity
-		if g.px < 0 {
-			g.px += screenWidth
-		}
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
-		g.py -= playerVelocity
-		if g.py < 0 {
-			g.py += screenHeight
-		}
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyR) {
-		err := g.init()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyQ) {
-		if g.v > 0 {
-			g.v -= 0.01
-		}
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyE) {
-		if g.v < 4.6 {
-			g.v += 0.01
-		}
-	}
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		if g.particleTimeout == 0 {
-			cx, cy := ebiten.CursorPosition()
-			dx := g.px - float64(cx)
-			dy := g.py - float64(cy)
-			d := math.Sqrt(math.Pow(dx, 2) + math.Pow(dy, 2))
-			v := math.Pow(math.E, g.v)
-			newParticle := Particle{vx: -v * (dx / d), vy: -v * (dy / d), x: g.px + playerR, y: g.py + playerR}
-			fmt.Println(newParticle)
-			g.particles = append(g.particles, newParticle)
-			g.particleTimeout = particleTimeout
-		}
-	}
-	for i := range g.particles {
-		if g.particles[i].y+particleR+g.particles[i].vy > screenHeight || g.particles[i].y-particleR+g.particles[i].vy < 0 {
-			g.particles[i].vy = -g.particles[i].vy * (1 - WallEnergyLoss)
-			if g.particles[i].x+particleR+g.particles[i].vx > screenWidth {
-				g.particles[i].vy = g.particles[i].vy * (1 - Friction)
-				g.particles[i].vx = g.particles[i].vy * (1 - Friction)
+		g.keys = inpututil.AppendPressedKeys(g.keys[:0])
+		if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+			g.px += playerVelocity
+			if g.px > screenWidth {
+				g.px -= screenWidth
 			}
-		} else if g.particles[i].x+particleR+g.particles[i].vx > screenWidth || g.particles[i].x-particleR+g.particles[i].vx < 0 {
-			g.particles[i].vx = -g.particles[i].vx * (1 - WallEnergyLoss)
-
 		}
-		g.particles[i].x += g.particles[i].vx
-		g.particles[i].y += g.particles[i].vy
-		g.particles[i].vy += G
-		g.particles[i].vy -= g.particles[i].vy * AirResistance
+
+		if ebiten.IsKeyPressed(ebiten.KeyS) || ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+			g.py += playerVelocity
+			if g.py > screenHeight {
+				g.py -= screenHeight
+			}
+		}
+
+		if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+			g.px -= playerVelocity
+			if g.px < 0 {
+				g.px += screenWidth
+			}
+		}
+
+		if ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+			g.py -= playerVelocity
+			if g.py < 0 {
+				g.py += screenHeight
+			}
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyR) {
+			err := g.init()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyQ) {
+			if g.v > 0 {
+				g.v -= 0.01
+			}
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyE) {
+			if g.v < 4.6 {
+				g.v += 0.01
+			}
+		}
+		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+			if g.particleTimeout == 0 {
+				cx, cy := ebiten.CursorPosition()
+				dx := g.px - float64(cx)
+				dy := g.py - float64(cy)
+				d := math.Sqrt(math.Pow(dx, 2) + math.Pow(dy, 2))
+				v := math.Pow(math.E, g.v)
+				newParticle := Particle{vx: -v * (dx / d), vy: -v * (dy / d), x: g.px, y: g.py, r: particleR}
+				fmt.Println(newParticle)
+				g.particles = append(g.particles, newParticle)
+				g.particleTimeout = particleTimeout
+			}
+		}
+		for i := range g.particles {
+
+			if g.particles[i].vx != 0 || g.particles[i].vy != 0 {
+				v := math.Sqrt(math.Pow(g.particles[i].vx, 2) + math.Pow(g.particles[i].vy, 2))
+				if g.particles[i].y+float64(g.particles[i].r)+g.particles[i].vy+1 > screenHeight || g.particles[i].y-float64(g.particles[i].r)+g.particles[i].vy-1 < 0 {
+					fmt.Println(g.particles[i], v, g.particles[i].vx/v, g.particles[i].vy/v)
+					g.particles[i].vx = g.particles[i].vx * (1 - math.Abs(Friction*(g.particles[i].vx/v)))
+					g.particles[i].vy = -g.particles[i].vy * (1 - math.Abs(Friction*(g.particles[i].vy/v)))
+					fmt.Println(g.particles[i])
+
+				} else if g.particles[i].x+float64(g.particles[i].r)+g.particles[i].vx+1 > screenWidth || g.particles[i].x-float64(g.particles[i].r)+g.particles[i].vx-1 < 0 {
+					fmt.Println(g.particles[i], v, g.particles[i].vx/v, g.particles[i].vy/v)
+					g.particles[i].vx = -g.particles[i].vx * (1 - math.Abs(Friction*(g.particles[i].vx/v)))
+					g.particles[i].vy = g.particles[i].vy * (1 - math.Abs(Friction*(g.particles[i].vy/v)))
+					fmt.Println(g.particles[i])
+
+				} else {
+					g.particles[i].vy += G
+				}
+				g.particles[i].vx = g.particles[i].vx * (1 - AirResistance)
+				g.particles[i].vy = g.particles[i].vy * (1 - AirResistance)
+				g.particles[i].x += g.particles[i].vx
+				g.particles[i].y += g.particles[i].vy
+
+				if g.particles[i].y > screenHeight-float64(g.particles[i].r)-1 && g.particles[i].vy < 0.005 {
+					g.particles[i].vy = 0
+				}
+				if g.particles[i].y > screenHeight-float64(g.particles[i].r)-1 && g.particles[i].vx < 0.005 {
+					g.particles[i].vx = 0
+				}
+			}
+
+			//fmt.Println(g.particles[i])
+		}
 	}
 	return nil
 }
@@ -159,7 +180,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(BGColor)
 	for i := range g.particles {
 		p := g.particles[i]
-		ebitenutil.DrawRect(screen, p.x-particleR, p.y-particleR, 2*particleR+1, 2*particleR+1, YellowColor)
+		ebitenutil.DrawRect(screen, p.x-float64(g.particles[i].r), p.y-float64(g.particles[i].r), 2*float64(g.particles[i].r)+1, 2*float64(g.particles[i].r)+1, YellowColor)
 	}
 	ebitenutil.DrawRect(screen, g.px-playerR, g.py-playerR, 2*playerR+1, 2*playerR+1, RedColor)
 
@@ -176,7 +197,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, msg)
 }
 
-func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
+func (g *Game) Layout(int, int) (int, int) {
 	return screenWidth, screenHeight
 }
 
