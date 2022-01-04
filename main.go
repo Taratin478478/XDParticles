@@ -22,13 +22,15 @@ const ( // parameters
 const ( // physics constants
 	G             = 0.1
 	AirResistance = 0.001
-	Friction      = 0.1
+	XFriction     = 0.02
+	YFriction     = 0.9
 )
 
 var (
-	BGColor     = color.RGBA{0x00, 0x00, 0x00, 0xff}
-	RedColor    = color.RGBA{255, 0, 0, 255}
-	YellowColor = color.RGBA{255, 255, 0, 255}
+	BGColor  = color.RGBA{0x00, 0x00, 0x00, 0xff}
+	RedColor = color.RGBA{255, 0, 0, 255}
+	//YellowColor = color.RGBA{255, 255, 0, 255}
+	BlueColor = color.RGBA{0, 0, 255, 255}
 
 	//pointerImage = ebiten.NewImage(8, 8)
 )
@@ -48,12 +50,12 @@ type Particle struct {
 	vy float64
 	x  float64
 	y  float64
-	r  int
+	r  float64
 }
 
 type Game struct {
 	clock           int
-	r               int
+	r               float64
 	particleTimeout int
 	px              float64
 	py              float64
@@ -63,6 +65,14 @@ type Game struct {
 	keys            []ebiten.Key
 }
 
+/* // абслютно упругое столкновение (сложно, не понял)
+func intersect(x1 float64, vx1 float64,  y1 float64, vy1 float64, r1 float64, x2 float64, vx2 float64, y2 float64, vy2 float64, r2 float64) (bool, float64, float64, float64, float64) {
+	if (x1+r1+1 >= x2-r2 || x1-r1-1 <= x2+r2) && (y1+r1+1 >= y2-r2 || y1-r1-1 <= y2+r2) {
+		return true, vx2, vy2, vx1, vy1
+	}
+	return false, 0, 0, 0, 0
+}
+*/
 func (g *Game) init() error {
 	g.clock = 0
 	g.px = screenWidth/2 - playerR
@@ -138,26 +148,44 @@ func (g *Game) Update() error {
 			}
 		}
 		for i := range g.particles {
-
 			if g.particles[i].vx != 0 || g.particles[i].vy != 0 {
-				v := math.Sqrt(math.Pow(g.particles[i].vx, 2) + math.Pow(g.particles[i].vy, 2))
-				if g.particles[i].y+float64(g.particles[i].r)+g.particles[i].vy+1 > screenHeight || g.particles[i].y-float64(g.particles[i].r)+g.particles[i].vy-1 < 0 {
+				if g.particles[i].y-g.particles[i].r+g.particles[i].vy-1 < 0 {
+					g.particles[i].vy = -g.particles[i].vy
+				} else if g.particles[i].x+g.particles[i].r+g.particles[i].vx+1 > screenWidth || g.particles[i].x-g.particles[i].r+g.particles[i].vx-1 < 0 {
+					g.particles[i].vx = -g.particles[i].vx
+				} else if g.particles[i].y+g.particles[i].r+g.particles[i].vy+1 > screenHeight {
+					v := math.Sqrt(math.Pow(g.particles[i].vx, 2) + math.Pow(g.particles[i].vy, 2))
 					fmt.Println(g.particles[i], v, g.particles[i].vx/v, g.particles[i].vy/v)
-					g.particles[i].vx = g.particles[i].vx * (1 - math.Abs(Friction*(g.particles[i].vx/v)))
-					g.particles[i].vy = -g.particles[i].vy * (1 - math.Abs(Friction*(g.particles[i].vy/v)))
+					g.particles[i].vx = g.particles[i].vx * (1 - math.Abs(XFriction*(g.particles[i].vx/v)))
+					g.particles[i].vy = -g.particles[i].vy * (1 - math.Abs(YFriction*(g.particles[i].vy/v)))
 					fmt.Println(g.particles[i])
-
-				} else if g.particles[i].x+float64(g.particles[i].r)+g.particles[i].vx+1 > screenWidth || g.particles[i].x-float64(g.particles[i].r)+g.particles[i].vx-1 < 0 {
-					fmt.Println(g.particles[i], v, g.particles[i].vx/v, g.particles[i].vy/v)
-					g.particles[i].vx = -g.particles[i].vx * (1 - math.Abs(Friction*(g.particles[i].vx/v)))
-					g.particles[i].vy = g.particles[i].vy * (1 - math.Abs(Friction*(g.particles[i].vy/v)))
-					fmt.Println(g.particles[i])
-
 				} else {
 					g.particles[i].vy += G
 				}
 				g.particles[i].vx = g.particles[i].vx * (1 - AirResistance)
 				g.particles[i].vy = g.particles[i].vy * (1 - AirResistance)
+				/*
+					for j := range g.particles[i:] {
+						var f bool
+						x1 := g.particles[i].x + g.particles[i].vx
+						vx1 := g.particles[i].vx
+						y1 := g.particles[i].y + g.particles[i].vy
+						vy1 := g.particles[i].vy
+						r1 := g.particles[i].r
+						x2 := g.particles[j].x + g.particles[j].vx
+						vx2 := g.particles[j].vx
+						y2 := g.particles[j].y + g.particles[j].vy
+						vy2 := g.particles[j].vy
+						r2 := g.particles[j].r
+						f, vx1, vy1, vx2, vy2 = intersect(x1, vx1, y1, vy1, r1, x2, vx2, y2, vy2, r2)
+						if f {
+							g.particles[i].vx = vx1
+							g.particles[i].vy = vy1
+							g.particles[j].vx = vx2
+							g.particles[j].vy = vy2
+						}
+					}
+				*/
 				g.particles[i].x += g.particles[i].vx
 				g.particles[i].y += g.particles[i].vy
 
@@ -180,7 +208,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(BGColor)
 	for i := range g.particles {
 		p := g.particles[i]
-		ebitenutil.DrawRect(screen, p.x-float64(g.particles[i].r), p.y-float64(g.particles[i].r), 2*float64(g.particles[i].r)+1, 2*float64(g.particles[i].r)+1, YellowColor)
+		ebitenutil.DrawRect(screen, p.x-g.particles[i].r, p.y-g.particles[i].r, 2*g.particles[i].r+1, 2*g.particles[i].r+1, BlueColor)
 	}
 	ebitenutil.DrawRect(screen, g.px-playerR, g.py-playerR, 2*playerR+1, 2*playerR+1, RedColor)
 
